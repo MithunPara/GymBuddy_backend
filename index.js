@@ -33,7 +33,9 @@ app.use(cookieParser());
 
 // When app starts, issue this message
 app.get('/', (req, res) => {
-    res.json({ message: 'API is working' });
+    res.json({ 
+        message: 'API is working' 
+    });
 });
 
 

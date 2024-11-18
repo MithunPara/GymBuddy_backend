@@ -101,11 +101,30 @@ router.post('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
 router.get('/getgoalcalorieintake', authTokenHandler, async (req, res) => {
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
+    let intakeTarget = 0;
     let heightInCm = parseFloat(user.height[user.height.length - 1].height);
     let weightInKg = parseFloat(user.weight[user.weight.length - 1].weight);
     let age = new Date().getFullYear - new Date(user.dob).getFullYear();
-    
+    let BMR = 0; // Basal metabolism rate, number of calories burned at rest/just from your body performing life-sustaining functions
+    let gender = user.gender;
 
+    if (gender == 'male') {
+        BMR = 88.362 + (13.397 * weightInKg) + (4.799 * heightInCm) - (5.677 * age);
+    } else if (gender == 'female') {
+        BMR = 447.593 + (9.247 * weightInKg) + (3.098 * heightInCm) - (4.330 * age);
+    } else {
+        BMR = 447.593 + (9.247 * weightInKg) + (3.098 * heightInCm) - (4.330 * age);
+    }
+
+    if (user.goal == 'weightLoss') {
+        intakeTarget = BMR - 500;
+    } else if (user.goal == 'weightGain') {
+        intakeTarget = BMR + 500;
+    } else {
+        intakeTarget = BMR;
+    }
+
+    res.json(createResponse(true, 'Recommended calorie intake:', {intakeTarget}));
 });
 
 router.delete('/deletecalorieintake', authTokenHandler, async (req, res) => {
@@ -123,6 +142,8 @@ router.delete('/deletecalorieintake', authTokenHandler, async (req, res) => {
     await user.save();
     res.json(createResponse(true, 'Calorie intake deleted successfully.'));
 });
+
+router.use(errorHandler);
 
 const filterEntriesbyDate = (entries, targetDate) => {
     return entries.filter(entry => {

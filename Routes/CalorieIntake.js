@@ -79,7 +79,7 @@ router.post('/getcalorieintakebydate', authTokenHandler, async (req, res) => {
     }
 
     user.calorieIntake = filterEntriesbyDate(user.calorieIntake, date);
-    return res.json(createResponse(true, 'Calorie intake for specified date:', user.calorieIntake));
+    res.json(createResponse(true, 'Calorie intake for specified date:', user.calorieIntake));
 });
 
 router.post('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {

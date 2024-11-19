@@ -13,54 +13,44 @@ const createResponse = (ok, message, data) => {
     };
 }
 
-router.post('/addsleepentry', authTokenHandler, async (req, res) => {
-    const { date, hoursSlept } = req.body;
+router.post('/addstepentry', authTokenHandler, async (req, res) => {
+    const { date, steps } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    if (!date || !hoursSlept) {
-        res.status(400).json(createResponse(false, 'Please provide the date and number of hours slept.'));
+    if (!date || !steps) {
+        res.status(400).json(createResponse(false, 'Please provide the date and step count.'));
     }
 
-    user.sleep.push({
+    user.steps.push({
         date: new Date(date),
-        hoursSlept,
+        steps,
     });
 
     await user.save();
-    res.json(createResponse(true, 'Sleep entry added successfully.'));
+    res.json(createResponse(true, 'Step entry added successfully.'));
 });
 
-router.get('/getsleepbydate', authTokenHandler, async (req, res) => {
+router.get('/getstepsbydate', authTokenHandler, async (req, res) => {
     const { date } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    if (!date) { // if no date is provided, give sleep entries for current date
+    if (!date) { // if date not inputted, assume today's date
         let date = new Date();
-        user.sleep = filterEntriesbyDate(user.sleep, date);
-
-        return res.json(createResponse(true, 'Sleep entries for today:', user.sleep));
+        user.steps = filterEntriesbyDate(user.steps, new Date(date));
+        return res.json(createResponse(true, 'Step entries for today:', user.steps));
     }
 
-    user.sleep = filterEntriesbyDate(user.sleep, new Date(date));
-    res.json(createResponse(true, 'Sleep entries for specified date:', user.sleep));
+    user.steps = filterEntriesbyDate(user.steps, new Date(date));
+    res.json(createResponse(true, 'Step entries for specified date:', user.steps));
 });
 
-router.get('/getsleepbylimit', authTokenHandler, async (req, res) => {
+router.get('/getstepsbylimit', authTokenHandler, async (req, res) => {
 
 });
 
-router.get('/getusersleepgoal', authTokenHandler, async (req, res) => {
-    const userId = req.userId;
-    const user = await User.findById({ _id: userId });
- 
-    const sleepTarget = 7;
-
-    res.json(createResponse(true, "User's current sleep information:", { sleepTarget })); 
-});
-
-router.delete('/deletesleepentry', authTokenHandler, async (req, res) => {
+router.delete('/deletestepentry', authTokenHandler, async (req, res) => {
     const { date } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
@@ -69,16 +59,16 @@ router.delete('/deletesleepentry', authTokenHandler, async (req, res) => {
         return res.status(400).json(createResponse(false, 'Please provide a date.'));
     }
 
-    user.sleep = user.sleep.filter(entry => {
+    user.steps = user.steps.filter(entry => {
         return (
             new Date(entry.date).getDate() != new Date(date).getDate() && 
             new Date(entry.date).getMonth() != new Date(date).getMonth() &&
             new Date(entry.date).getFullYear() != new Date(date).getFullYear()
         );
     });
-
+    
     await user.save();
-    res.json(true, 'Sleep entry deleted successfully.');
+    res.json(createResponse(true, 'Step entry deleted successfully.'));
 });
 
 router.use(errorHandler);

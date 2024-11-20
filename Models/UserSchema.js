@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
                 type: Date,
                 required: true,
             },
-        }
+        },
     ],
     height: [
         {
@@ -37,7 +37,7 @@ const userSchema = new mongoose.Schema({
                 type: Date,
                 required: true,
             },
-        }
+        },
     ],
     gender: {
         type: String,
@@ -73,7 +73,7 @@ const userSchema = new mongoose.Schema({
                 type: Number,
                 required: true,
              },
-        }
+        },
     ],
     activityLevel: {
         type: String,
@@ -89,7 +89,7 @@ const userSchema = new mongoose.Schema({
                 type: Number,
                 required: true,
             },
-        }
+        },
     ],
     steps: [
         {
@@ -101,7 +101,7 @@ const userSchema = new mongoose.Schema({
                 type: Number,
                 required: true,
             },
-        }
+        },
     ],
     workouts: [
         {
@@ -117,7 +117,19 @@ const userSchema = new mongoose.Schema({
                 type: Number,
                 required: true,
             },
-        }
+        },
+    ],
+    water: [
+        {
+            date: {
+                type: Date,
+                required: true,
+            },
+            amountInML: {
+                type: Number,
+                required: true,
+            },
+        },
     ],
 }, {timestamps: true});
 

@@ -70,11 +70,7 @@ router.delete('/deletesleepentry', authTokenHandler, async (req, res) => {
     }
 
     user.sleep = user.sleep.filter(entry => {
-        return (
-            new Date(entry.date).getDate() != new Date(date).getDate() && 
-            new Date(entry.date).getMonth() != new Date(date).getMonth() &&
-            new Date(entry.date).getFullYear() != new Date(date).getFullYear()
-        );
+        return entry.date !== date;
     });
 
     await user.save();
@@ -93,3 +89,5 @@ const filterEntriesbyDate = (entries, targetDate) => {
         );
     });
 }
+
+module.exports = router;

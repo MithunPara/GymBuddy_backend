@@ -63,7 +63,7 @@ router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
         });
 
         await user.save();
-        res.json(createResponse(true, 'Calorie intake updated successfully.'));
+        res.json(createResponse(true, 'Calorie intake added successfully.'));
     }
     });
 });

@@ -13,48 +13,48 @@ const createResponse = (ok, message, data) => {
     };
 }
 
-router.post('/addstepentry', authTokenHandler, async (req, res) => {
-    const { date, steps } = req.body;
+router.post('/addweightentry', authTokenHandler, async (req, res) => {
+    const { date, weightInLbs } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    if (!date || !steps) {
-        res.status(400).json(createResponse(false, 'Please provide the date and step count.'));
+    if (!date || !weightInLbs) {
+        return res.status(400).json(createResponse(false, 'Please provide the date and weight.'));
     }
 
-    user.steps.push({
+    user.weight.push({
         date: new Date(date),
-        steps,
+        weight: weightInLbs,
     });
 
     await user.save();
-    res.json(createResponse(true, 'Step entry added successfully.'));
+    res.json(createResponse(true, 'Weight entry added successfully.'));
 });
 
-router.get('/getstepsbydate', authTokenHandler, async (req, res) => {
+router.get('/getweightbydate', authTokenHandler, async (req, res) => {
     const { date } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    if (!date) { // if date not inputted, assume today's date
+    if (!date) { // if date not provided, get weight entry for current date
         let date = new Date();
-        user.steps = filterEntriesbyDate(user.steps, new Date(date));
-        return res.json(createResponse(true, 'Step entries for today:', user.steps));
+        user.weight = filterEntriesbyDate(user.weight, date);
+        return res.json(createResponse(true, 'Weight entry for today:', user.weight));
     }
 
-    user.steps = filterEntriesbyDate(user.steps, new Date(date));
-    res.json(createResponse(true, 'Step entries for specified date:', user.steps));
+    user.weight = filterEntriesbyDate(user.weight, new Date(date));
+    res.json(createResponse(true, 'Weight entries for specified date:', user.weight));
 });
 
-router.get('/getstepsbylimit', authTokenHandler, async (req, res) => {
+router.get('/getweightbylimit', authTokenHandler, async (req, res) => {
 
 });
 
-router.get('/getuserstepsgoal', authTokenHandler, async (req, res) => {
-     
+router.get('/getuserweightgoal', authTokenHandler, async (req, res) => {
+    
 });
 
-router.delete('/deletestepentry', authTokenHandler, async (req, res) => {
+router.delete('/deleteweightentry', authTokenHandler, async (req, res) => {
     const { date } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
@@ -63,12 +63,12 @@ router.delete('/deletestepentry', authTokenHandler, async (req, res) => {
         return res.status(400).json(createResponse(false, 'Please provide a date.'));
     }
 
-    user.steps = user.steps.filter(entry => {
+    user.weight = user.weight.filter(entry => {
         return entry.date !== date;
     });
-    
+
     await user.save();
-    res.json(createResponse(true, 'Step entry deleted successfully.'));
+    res.json(createResponse(true, 'Weight entry deleted successfully.'));
 });
 
 router.use(errorHandler);

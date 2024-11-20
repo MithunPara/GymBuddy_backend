@@ -13,48 +13,49 @@ const createResponse = (ok, message, data) => {
     };
 }
 
-router.post('/addstepentry', authTokenHandler, async (req, res) => {
-    const { date, steps } = req.body;
+router.post('/addwaterentry', authTokenHandler, async (req, res) => {
+    const { date, amountInML } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    if (!date || !steps) {
-        res.status(400).json(createResponse(false, 'Please provide the date and step count.'));
+    if (!date || !amountInML) {
+        return res.status(400).json(createResponse(false, 'Please provide the date and amount of water.'));
     }
 
-    user.steps.push({
+    user.water.push({
         date: new Date(date),
-        steps,
+        amountInML,
     });
 
     await user.save();
-    res.json(createResponse(true, 'Step entry added successfully.'));
+    res.json(createResponse(true, 'Water entry added successfully.'));
 });
 
-router.get('/getstepsbydate', authTokenHandler, async (req, res) => {
+router.get('/getwaterbydate', authTokenHandler, async (req, res) => {
     const { date } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    if (!date) { // if date not inputted, assume today's date
+    if (!date) { // if date not provided, get water entries for current date
         let date = new Date();
-        user.steps = filterEntriesbyDate(user.steps, new Date(date));
-        return res.json(createResponse(true, 'Step entries for today:', user.steps));
+        user.water = filterEntriesbyDate(user.water, date);
+        return res.json(createResponse(true, 'Water entries for today:', user.water));
     }
 
-    user.steps = filterEntriesbyDate(user.steps, new Date(date));
-    res.json(createResponse(true, 'Step entries for specified date:', user.steps));
+    user.water = filterEntriesbyDate(user.water, new Date(date));
+    res.json(createResponse(true, 'Water entries for specified date:', user.water));
 });
 
-router.get('/getstepsbylimit', authTokenHandler, async (req, res) => {
+router.get('/getwaterbylimit', authTokenHandler, async (req, res) => {
 
 });
 
-router.get('/getuserstepsgoal', authTokenHandler, async (req, res) => {
-     
+router.get('/getuserwatergoal', authTokenHandler, async (req, res) => {
+    const waterGoal = 3000; // goal water amount provided in mL
+    res.json(createResponse(true, "User's current water goal:", { waterGoal }));
 });
 
-router.delete('/deletestepentry', authTokenHandler, async (req, res) => {
+router.delete('/deletewaterentry', authTokenHandler, async (req, res) => {
     const { date } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
@@ -63,12 +64,12 @@ router.delete('/deletestepentry', authTokenHandler, async (req, res) => {
         return res.status(400).json(createResponse(false, 'Please provide a date.'));
     }
 
-    user.steps = user.steps.filter(entry => {
+    user.water = user.water.filter(entry => {
         return entry.date !== date;
     });
-    
+
     await user.save();
-    res.json(createResponse(true, 'Step entry deleted successfully.'));
+    res.json(createResponse(true, 'Water entry deleted successfully.'));
 });
 
 router.use(errorHandler);

@@ -15,7 +15,7 @@ const createResponse = (ok, message, data) => {
 }
 
 // Create a new workout routine, need admin privileges
-app.post('/routines', adminTokenHandler, async (req, res) => {
+router.post('/routines', adminTokenHandler, async (req, res) => {
     try {
         const { name, details, lengthMinutes, exercises, imageURL } = req.body;
         const routine = new Routine({
@@ -35,7 +35,7 @@ app.post('/routines', adminTokenHandler, async (req, res) => {
 });
 
 // Retrieve all existing routines in database
-app.get('/routines', async (req, res) => {
+router.get('/routines', async (req, res) => {
     try {
         const routines = await Routine.find({});
         res.json(createResponse(true, 'All workout routines fetched successfully.', routines));
@@ -46,7 +46,7 @@ app.get('/routines', async (req, res) => {
 });
 
 // Retrieve a specific workout routine
-app.get('/routines/:id', async (req, res) => {
+router.get('/routines/:id', async (req, res) => {
     try {
         const routine = await Routine.findById(req.params.id);
         res.json(createResponse(true, 'Workout routine fetched successfully.', routine));
@@ -57,7 +57,7 @@ app.get('/routines/:id', async (req, res) => {
 });
 
 // Update an existing workout routine
-app.put('/workouts/:id', adminTokenHandler, async (req, res) => {
+router.put('/workouts/:id', adminTokenHandler, async (req, res) => {
     try {
         const routine = await Routine.findById(req.params.id);
         const { name, details, lengthMinutes, exercises, imageURL } = req.body;
@@ -77,7 +77,7 @@ app.put('/workouts/:id', adminTokenHandler, async (req, res) => {
 });
 
 // Delete a workout routine
-app.delete('/workouts/:id', adminTokenHandler, async (req, res) => {
+router.delete('/workouts/:id', adminTokenHandler, async (req, res) => {
     try {
         const routine = await Routine.findById(req.params.id);
         await routine.remove();

@@ -113,7 +113,7 @@ const userSchema = new mongoose.Schema({
                 type: String,
                 required: true,
             },
-            workoutLengthMinutes: {
+            lengthMinutes: {
                 type: Number,
                 required: true,
             },

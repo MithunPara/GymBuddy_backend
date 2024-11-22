@@ -6,6 +6,16 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const PORT = 8000;
 
+const authRoutes = require('./Routes/Auth');
+const adminRoutes = require('./Routes/Admin');
+const calorieIntakeRoutes = require('./Routes/CalorieIntake');
+const imageUploadRoutes = require('./Routes/ImageUpload')
+const sleepTrackerRoutes = require('./Routes/SleepTracker');
+const stepTrackerRoutes = require('./Routes/StepTracker');
+const waterTrackerRoutes = require('./Routes/WaterTracker');
+const weightTrackerRoutes = require('./Routes/WeightTracker');
+const workoutRoutineRoutes = require('./Routes/WorkoutRoutines');
+const workoutTrackerRoutes = require('./Routes/WorkoutTracker');
 
 require('dotenv').config();
 require('./db');
@@ -30,6 +40,17 @@ app.use(
 
 // Used to store all information related to cookies
 app.use(cookieParser());
+
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+app.use('/calorieintake', calorieIntakeRoutes);
+app.use('/imageupload', imageUploadRoutes);
+app.use('/sleeptracker', sleepTrackerRoutes);
+app.use('/steptracker', stepTrackerRoutes);
+app.use('/watertracker', waterTrackerRoutes);
+app.use('/weighttracker', weightTrackerRoutes);
+app.use('/workoutroutines', workoutRoutineRoutes);
+app.use('/workouttracker', workoutTrackerRoutes);
 
 // When app starts, issue this message
 app.get('/', (req, res) => {

@@ -19,10 +19,72 @@ router.get('/test', authTokenHandler, async (req, res) => {
     res.json(createResponse(true, 'Test API is working for calorie intake reports.'));
 });
 
-router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
-    const { item, date, amount, amountType } = req.body;
+router.post('/searchfood', authTokenHandler, async (req, res) => {
+    const { query } = req.body;
 
-    if (!item || !date || !amount || !amountType) {
+    const options = {
+        url: 'https://api.nal.usda.gov/fdc/v1/foods/search',
+        qs: {
+            api_key: process.env.USDA_API_KEY,
+            query: query
+        },
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }
+
+    request.get(options, async function (error, response, body) {
+        if (error) return console.error('Request failed:', error);
+        else if(response.statusCode != 200) return console.error('Error:', response.statusCode, body.toString('utf8'));
+        else {
+            const data = JSON.parse(body);
+            const foodList = data.foods.map(food => {
+                return {
+                    fdcId: food.fdcId,
+                    description: food.description,
+                    ingredients: food.ingredients
+                }
+            });
+
+            res.json(createResponse(true, 'List of matching food items retrieved successfully.', foodList));
+        }
+    });
+});
+
+router.post('/getnutrients', authTokenHandler, async (req, res) => {
+    const { fdcId } = req.body;
+
+    const options = {
+        url: `https://api.nal.usda.gov/fdc/v1/foods/${fdcId}`,
+        qs: {
+            api_key: process.env.USDA_API_KEY,
+        },
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }
+
+    request.get(options, async function (error, response, body) {
+        if (error) return console.error('Request failed:', error);
+        else if(response.statusCode != 200) return console.error('Error:', response.statusCode, body.toString('utf8'));
+        else {
+            const data = JSON.parse(body);
+            const nutrients = data.foodNutrients.filter(nutrient => [
+                'Energy', 'Protein', 'Total lipid (fat)', 'Carbohydrate, by difference'
+            ].some(keyword => 
+                nutrient.nutrient.name.includes(keyword)
+            )
+            );
+
+            res.json(createResponse, 'Macronutrients for food item retrieved successfully.', nutrients)
+        }
+    });
+});
+
+router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
+    const { item, date, amount, amountType, fdcId } = req.body;
+
+    if (!item || !date || !amount || !amountType || !fdcId) {
         return res.status(401).json(createResponse(false, 'Please provide all the details.'));
     }
 
@@ -38,33 +100,58 @@ router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
         res.status(400).json(createResponse(false, 'Invalid amount type.'));
     }
 
-    var query = item;
-    request.get({
-    url: 'https://api.api-ninjas.com/v1/nutrition?query=' + query,
-    headers: {
-        'X-Api-Key': process.env.NUTRITION_API_KEY,
-    },
-    }, async function(error, response, body) {
-    if(error) return console.error('Request failed:', error);
-    else if(response.statusCode != 200) return console.error('Error:', response.statusCode, body.toString('utf8'));
-    else {
-        body = JSON.parse(body);
-        // Amount of calories per gram of the food item * number of grams eaten
-        let calorieIntake = (body[0].calories / body[0].serving_size_g) * parseFloat(amountInGrams);
-        const userId = req.userId;
-        const user = await User.findById({ _id: userId });
-        // update the logged in user's calorie intake
-        user.calorieIntake.push({
-            item,
-            date: new Date(date),
-            amount,
-            amountType,
-            calorieIntake: parseFloat(calorieIntake)
-        });
+    // const options = {
+    //     url: `https://api.nal.usda.gov/fdc/v1/foods/${fdcId}`,
+    //     qs: {
+    //         api_key: process.env.USDA_API_KEY,
+    //     },
+    //     headers: {
+    //         'Content-Type': 'application/json'
+    //     }
+    // }
 
-        await user.save();
-        res.json(createResponse(true, 'Calorie intake added successfully.'));
-    }
+    const url = `https://api.nal.usda.gov/fdc/v1/food/${fdcId}?api_key=${encodeURIComponent(process.env.USDA_API_KEY)}`;
+
+    const options = {
+        url: url,
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    };
+
+    request.get(options, async function (error, response, body) {
+        if (error) return console.error('Request failed:', error);
+        else if(response.statusCode != 200) return console.error('Error:', response.statusCode, body.toString('utf8'));
+        else {
+            const data = JSON.parse(body);
+
+            const calorieNutrient = data.foodNutrients.find(nutrient => {
+                if (nutrient.nutrient && nutrient.nutrient.name && nutrient.nutrient.unitName) {
+                    return nutrient.nutrient.name.includes('Energy') && nutrient.nutrient.unitName === 'kcal';
+                }
+                return false;
+            });
+
+            if (!calorieNutrient || isNaN(calorieNutrient.amount)) {
+                return console.error('Invalid API response:', data);
+            }
+
+            // Amount of calories per gram of the food item * number of grams eaten
+            let calorieIntake = (calorieNutrient.amount / 100) * parseFloat(amountInGrams);
+            const userId = req.userId;
+            const user = await User.findById({ _id: userId });
+            // update the logged in user's calorie intake
+            user.calorieIntake.push({
+                item,
+                date: new Date(date),
+                amount,
+                amountType,
+                intake: parseFloat(calorieIntake)
+            });
+    
+            await user.save();
+            res.json(createResponse(true, 'Calorie intake added successfully.'));
+        }
     });
 });
 
@@ -92,8 +179,11 @@ router.post('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
         return res.json(createResponse(true, 'Calorie intake:', user.calorieIntake));
     } else {
         let date = new Date();
-        date.setDate(date.getDate() - parseInt(limit));
-        user.calorieIntake = filterEntriesbyDate(user.calorieIntake, date);
+        date.setDate(date.getDate() - parseInt(limit)).getTime();
+
+        user.calorieIntake = user.calorieIntake.filter(entry => {
+            return new Date(entry.date).getTime() >= date;
+        });
         return res.json(createResponse(true, `Calorie intake for last ${limit} days:`, user.calorieIntake));
     }
 });

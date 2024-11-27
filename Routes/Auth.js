@@ -74,7 +74,7 @@ router.post('/register', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
     try {
         const { email, password } = req.body;
-        const user = User.findOne({ email });
+        const user = await User.findOne({ email });
         if (!user) {
             // if a user with the inputted email/password cannot be found
             return res.status(400).json(createResponse(false, 'User with this email does not exist.'))

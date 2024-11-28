@@ -47,7 +47,24 @@ router.get('/getwaterbydate', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getwaterbylimit', authTokenHandler, async (req, res) => {
+    const { limit } = req.body;
+    const userId = req.userId;
+    const user = await User.findById({ _id: userId });
 
+    if (!limit) {
+        return res.status(400).json(createResponse(false, 'Please provide a limit.'));
+    } else if (limit === 'all') {
+        return res.json(createResponse(true, 'All water entries:', user.water));
+    } else {
+        let date = new Date();
+        let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();
+
+        user.water = user.water.filter(entry => {
+            return new Date(entry.date).getTime() >= newDate;
+        });
+
+        return res.json(createResponse(true, `Water entries for last ${limit} days:`, user.water));
+    }
 });
 
 router.get('/getuserwatergoal', authTokenHandler, async (req, res) => {

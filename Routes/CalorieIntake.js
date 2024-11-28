@@ -243,7 +243,7 @@ router.get('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
     if(!limit) {
         return res.status(400).json(createResponse(false, 'Please provide a limit.'));
     } else if (limit === 'all') {
-        return res.json(createResponse(true, 'Calorie intake:', user.calorieIntake));
+        return res.json(createResponse(true, 'All calorie intake entries:', user.calorieIntake));
     } else {
         let date = new Date();
         let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();

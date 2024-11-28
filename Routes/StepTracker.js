@@ -47,11 +47,41 @@ router.get('/getstepsbydate', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getstepsbylimit', authTokenHandler, async (req, res) => {
+    const { limit } = req.body;
+    const userId = req.userId;
+    const user = await User.findById({ _id: userId });
 
+    if (!limit) {
+        return res.status(400).json(createResponse(false, 'Please provide a limit.'));
+    } else if (limit === 'all') {
+        return res.json(createResponse(true, 'All step entries:', user.steps));
+    } else {
+        let date = new Date();
+        let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();
+
+        user.steps = user.steps.filter(entry => {
+            return new Date(entry.date).getTime() >= newDate;
+        });
+
+        return res.json(createResponse(true, `Step entries for last ${limit} days:`, user.steps));
+    }
 });
 
 router.get('/getuserstepsgoal', authTokenHandler, async (req, res) => {
-     
+     const userId = req.userId;
+     const user = await User.findById({ _id: userId });
+
+     let stepGoal = 0;
+
+     if (user.goal == 'weightLoss') {
+        stepGoal = 10000;
+     } else if (user.goal == 'weightGain') {
+        stepGoal = 5000;
+     } else {
+        stepGoal = 7500;
+     }
+
+     res.json(createResponse(true, 'Recommended daily steps:', { stepGoal }));
 });
 
 router.delete('/deletestepentry', authTokenHandler, async (req, res) => {

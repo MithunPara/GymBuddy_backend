@@ -48,7 +48,24 @@ router.get('/getsleepbydate', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getsleepbylimit', authTokenHandler, async (req, res) => {
+    const { limit } = req.body;
+    const userId = req.userId;
+    const user = await User.findById({ _id: userId });
 
+    if (!limit) {
+        return res.status(400).json(createResponse(false, 'Please provide a limit.'));
+    } else if (limit === 'all') {
+        return res.json(createResponse(true, 'All sleep entries:', user.sleep));
+    } else {
+        let date = new Date();
+        let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();
+
+        user.sleep = user.sleep.filter(entry => {
+            return new Date(entry.date).getTime() >= newDate;
+        });
+
+        return res.json(createResponse(true, `Sleep entries for last ${limit} days:`, user.sleep));
+    }
 });
 
 router.get('/getusersleepgoal', authTokenHandler, async (req, res) => {

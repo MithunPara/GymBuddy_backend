@@ -14,17 +14,17 @@ const createResponse = (ok, message, data) => {
 }
 
 router.post('/addweightentry', authTokenHandler, async (req, res) => {
-    const { date, weightInLbs } = req.body;
+    const { date, weightInKg } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    if (!date || !weightInLbs) {
+    if (!date || !weightInKg) {
         return res.status(400).json(createResponse(false, 'Please provide the date and weight.'));
     }
 
     user.weight.push({
         date: new Date(date),
-        weight: weightInLbs,
+        weight: weightInKg,
     });
 
     await user.save();
@@ -47,10 +47,33 @@ router.get('/getweightbydate', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getweightbylimit', authTokenHandler, async (req, res) => {
+    const { limit } = req.body;
+    const userId = req.userId;
+    const user = await User.findById({ _id: userId });
 
+    if (!limit) {
+        return res.status(400).json(createResponse(false, 'Please provide a limit.'));
+    } else if (limit === 'all') {
+        return res.json(createResponse(true, 'All weight entries:', user.weight));
+    } else {
+        let date = new Date();
+        let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();
+
+        user.weight = user.weight.filter(entry => {
+            return new Date(entry.date).getTime() >= newDate;
+        });
+
+        return res.json(createResponse(true, `Weight entries for last ${limit} days:`, user.weight));
+    }
 });
 
 router.get('/getuserweightgoal', authTokenHandler, async (req, res) => {
+    // Currently using BMI range to set weight goal, may not be the most accurate approach as
+    // it can vary based on person's body fat, activity levels, whether they are a lifter, etc. 
+
+    const userId = req.userId;
+    const user = await User.findById({ _id: userId });
+
     
 });
 

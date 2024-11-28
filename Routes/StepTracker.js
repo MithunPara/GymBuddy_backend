@@ -38,7 +38,7 @@ router.get('/getstepsbydate', authTokenHandler, async (req, res) => {
 
     if (!date) { // if date not inputted, assume today's date
         let date = new Date();
-        user.steps = filterEntriesbyDate(user.steps, new Date(date));
+        user.steps = filterEntriesbyDate(user.steps, date);
         return res.json(createResponse(true, 'Step entries for today:', user.steps));
     }
 

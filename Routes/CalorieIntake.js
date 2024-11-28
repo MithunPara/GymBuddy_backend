@@ -19,43 +19,115 @@ router.get('/test', authTokenHandler, async (req, res) => {
     res.json(createResponse(true, 'Test API is working for calorie intake reports.'));
 });
 
-router.post('/searchfood', authTokenHandler, async (req, res) => {
+router.get('/searchfood', authTokenHandler, async (req, res) => {
     const { query } = req.body;
 
-    const options = {
-        url: 'https://api.nal.usda.gov/fdc/v1/foods/search',
-        qs: {
-            api_key: process.env.USDA_API_KEY,
-            query: query
-        },
-        headers: {
-            'Content-Type': 'application/json'
+    // Function to fetch data based on data type, ensures that we can obtain an even split of branded/SR legacy food options in the output
+    const fetchDataType = async (dataType, pageSize) => {
+        const options = {
+            url: 'https://api.nal.usda.gov/fdc/v1/foods/search',
+            qs: {
+                api_key: process.env.USDA_API_KEY,
+                query: query,
+                dataType: [dataType],
+                pageSize: pageSize
+            },
+            headers: {
+                'Content-Type': 'application/json'
+            }
         }
-    }
-
-    request.get(options, async function (error, response, body) {
-        if (error) return console.error('Request failed:', error);
-        else if(response.statusCode != 200) return console.error('Error:', response.statusCode, body.toString('utf8'));
-        else {
-            const data = JSON.parse(body);
-            const foodList = data.foods.map(food => {
-                return {
-                    fdcId: food.fdcId,
-                    description: food.description,
-                    ingredients: food.ingredients
+        
+        return new Promise((resolve, reject) => {
+            request.get(options, (error, response, body) => {
+                if (error) return reject(error);
+                if(response.statusCode !== 200) return reject(`Error ${response.statusCode}: ${body}`);
+                try {
+                    const data = JSON.parse(body);
+                    resolve(data.foods || []);
+                } catch (err) {
+                    reject(`Failed to parse JSON: ${err}`);
                 }
             });
+        });
+    }
 
-            res.json(createResponse(true, 'List of matching food items retrieved successfully.', foodList));
+    try {
+        // Separate API calls for branded/SR Legacy food items to obtain an even output
+        const brandedFoodPromise = fetchDataType('Branded', 15);
+        const srLegacyFoodPromise = fetchDataType('SR Legacy', 15);
+
+        const [brandedFoods, srLegacyFoods] = await Promise.all([brandedFoodPromise, srLegacyFoodPromise]);
+
+        const combinedFoods = [...brandedFoods, ...srLegacyFoods];
+
+        const searchKeywords = query.toLowerCase().split(' '); // retrieve all the keywords from the search result
+
+        // Prioritize foods that contain all of the keywords provided in the search query
+        const exactResults = combinedFoods.filter(food => {
+            return searchKeywords.every(keyword => food.description.toLowerCase().includes(keyword));
+        });
+
+        // if there are not enough foods that contain all keywords, add some food options that contain some of the keywords
+        let otherResults = [];
+        if (exactResults.length < 20) {
+            otherResults = combinedFoods.filter(food => {
+                return searchKeywords.some(keyword => food.description.toLowerCase().includes(keyword) && !exactResults.includes(food));
+            });
         }
-    });
+
+        const finalResults = [...exactResults, ...otherResults];
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Add in limit logic below if I want to standardize amount of items received on each query.
+        // Ex. as of now, it can output 15 branded items and 2 SR Legacy items if there are not enough SR Legacy items,
+        // which totals to 17 items, instead of retrieving extra branded items to provide 30 food options in the query for example
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+        // // split the final results into branded food options and SR Legacy food options
+        // const brandedFoods = finalResults.filter(food => food.dataType === 'Branded');
+        // const srLegacyFoods = finalResults.filter(food => food.dataType === 'SR Legacy');
+        // let limit = 10; // retrieve up to 10 food options from Branded and SR Legacy foods
+
+        // let srLegacyLimit = 0;
+        // let brandedLimit = 0;
+        // if (brandedFoods.length < limit) {
+        //     // if there are less than 10 branded food options, fill the remaining 20 output options with SR Legacy food options
+        //     srLegacyLimit = Math.min(srLegacyFoods.length, 20 - brandedFoods.length);
+        //     brandedLimit = brandedFoods.length;
+        // } else if (srLegacyFoods.length < limit) {
+        //     // if there are less than 10 SR Legacy food options, fill the remaining 20 output options with Branded food options
+        //     brandedLimit = Math.min(brandedFoods.length, 20 - srLegacyFoods.length);
+        //     srLegacyLimit = srLegacyFoods.length;
+        // } else {
+        //     // if there are 10 or more SR Legacy and Branded food options, output 10 SR Legacy and Branded food options
+        //     srLegacyLimit = limit;
+        //     brandedLimit = limit;
+        // }
+
+        // const outputFoods = [...brandedFoods.slice(0, brandedLimit), ...srLegacyFoods.slice(0, srLegacyLimit)];
+
+        const foodList = finalResults.map(food => {
+            return {
+                fdcId: food.fdcId,
+                description: food.description,
+                ingredients: food.ingredients,
+                dataType: food.dataType
+            }
+        });
+
+        res.json(createResponse(true, 'List of matching food items retrieved successfully.', foodList));
+    } catch (err) {
+        console.error('Error:', error);
+        res.status(400).json(createResponse(false, 'Failed to retrieve food items.', error));
+    }
 });
 
-router.post('/getnutrients', authTokenHandler, async (req, res) => {
+router.get('/getnutrients', authTokenHandler, async (req, res) => {
     const { fdcId } = req.body;
 
     const options = {
-        url: `https://api.nal.usda.gov/fdc/v1/foods/${fdcId}`,
+        url: `https://api.nal.usda.gov/fdc/v1/food/${fdcId}`,
         qs: {
             api_key: process.env.USDA_API_KEY,
         },
@@ -71,12 +143,16 @@ router.post('/getnutrients', authTokenHandler, async (req, res) => {
             const data = JSON.parse(body);
             const nutrients = data.foodNutrients.filter(nutrient => [
                 'Energy', 'Protein', 'Total lipid (fat)', 'Carbohydrate, by difference'
-            ].some(keyword => 
-                nutrient.nutrient.name.includes(keyword)
+            ].some(keyword => {
+                if (nutrient.nutrient && nutrient.nutrient.name) {
+                    return nutrient.nutrient.name.includes(keyword);
+                }
+                return false;
+            }
             )
             );
 
-            res.json(createResponse, 'Macronutrients for food item retrieved successfully.', nutrients)
+            res.json(createResponse(true, 'Macronutrients for food item retrieved successfully.', nutrients));
         }
     });
 });
@@ -100,24 +176,15 @@ router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
         res.status(400).json(createResponse(false, 'Invalid amount type.'));
     }
 
-    // const options = {
-    //     url: `https://api.nal.usda.gov/fdc/v1/foods/${fdcId}`,
-    //     qs: {
-    //         api_key: process.env.USDA_API_KEY,
-    //     },
-    //     headers: {
-    //         'Content-Type': 'application/json'
-    //     }
-    // }
-
-    const url = `https://api.nal.usda.gov/fdc/v1/food/${fdcId}?api_key=${encodeURIComponent(process.env.USDA_API_KEY)}`;
-
     const options = {
-        url: url,
+        url: `https://api.nal.usda.gov/fdc/v1/food/${fdcId}`,
+        qs: {
+            api_key: process.env.USDA_API_KEY,
+        },
         headers: {
             'Content-Type': 'application/json'
         }
-    };
+    }
 
     request.get(options, async function (error, response, body) {
         if (error) return console.error('Request failed:', error);
@@ -155,7 +222,7 @@ router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
     });
 });
 
-router.post('/getcalorieintakebydate', authTokenHandler, async (req, res) => {
+router.get('/getcalorieintakebydate', authTokenHandler, async (req, res) => {
     const { date } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
@@ -165,11 +232,11 @@ router.post('/getcalorieintakebydate', authTokenHandler, async (req, res) => {
         return res.json(createResponse(true, 'Calorie intake for today:', user.calorieIntake));
     }
 
-    user.calorieIntake = filterEntriesbyDate(user.calorieIntake, date);
+    user.calorieIntake = filterEntriesbyDate(user.calorieIntake, new Date(date));
     res.json(createResponse(true, 'Calorie intake for specified date:', user.calorieIntake));
 });
 
-router.post('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
+router.get('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
     const { limit } = req.body;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
@@ -179,10 +246,10 @@ router.post('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
         return res.json(createResponse(true, 'Calorie intake:', user.calorieIntake));
     } else {
         let date = new Date();
-        date.setDate(date.getDate() - parseInt(limit)).getTime();
+        let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();
 
         user.calorieIntake = user.calorieIntake.filter(entry => {
-            return new Date(entry.date).getTime() >= date;
+            return new Date(entry.date).getTime() >= newDate;
         });
         return res.json(createResponse(true, `Calorie intake for last ${limit} days:`, user.calorieIntake));
     }
@@ -194,7 +261,7 @@ router.get('/getgoalcalorieintake', authTokenHandler, async (req, res) => {
     let intakeTarget = 0;
     let heightInCm = parseFloat(user.height[user.height.length - 1].height);
     let weightInKg = parseFloat(user.weight[user.weight.length - 1].weight);
-    let age = new Date().getFullYear - new Date(user.dob).getFullYear();
+    let age = new Date().getFullYear() - new Date(user.dob).getFullYear();
     let BMR = 0; // Basal metabolism rate, number of calories burned at rest/just from your body performing life-sustaining functions
     let gender = user.gender;
 

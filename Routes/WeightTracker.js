@@ -74,7 +74,17 @@ router.get('/getuserweightgoal', authTokenHandler, async (req, res) => {
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
 
-    
+    const minBMI = 18.5;
+    const maxBMI = 24.9;
+    // assumes that height is inputted in cm
+    // Calculation: BMI * (height in m)^2 
+    const minWeight = minBMI * ((user.height[user.height.length - 1].height / 100) ** 2);
+    const maxWeight = maxBMI * ((user.height[user.height.length - 1].height / 100) ** 2);
+
+    const currentWeight = user.weight.length > 0 ? user.weight[user.weight.length - 1].weight : null;
+    const goalWeightRange = `Healthy weight range for your height: ${minWeight.toFixed(1)} kg - ${maxWeight.toFixed(1)} kg.`;
+
+    res.json(createResponse(true, 'Goal weight range for user:', { currentWeight, goalWeightRange }));
 });
 
 router.delete('/deleteweightentry', authTokenHandler, async (req, res) => {

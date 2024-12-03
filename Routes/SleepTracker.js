@@ -72,7 +72,7 @@ router.get('/getusersleepgoal', authTokenHandler, async (req, res) => {
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
  
-    const sleepTarget = 7;
+    let sleepTarget = 7;
 
     res.json(createResponse(true, "User's current sleep information:", { sleepTarget })); 
 });

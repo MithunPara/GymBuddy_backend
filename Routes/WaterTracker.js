@@ -68,7 +68,7 @@ router.get('/getwaterbylimit', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getuserwatergoal', authTokenHandler, async (req, res) => {
-    const waterGoal = 3000; // goal water amount provided in mL
+    let waterGoal = 3000; // goal water amount provided in mL
     res.json(createResponse(true, "User's current water goal:", { waterGoal }));
 });
 

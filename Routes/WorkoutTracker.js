@@ -48,11 +48,29 @@ router.get('/getworkoutsbydate', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getworkoutsbylimit', authTokenHandler, async (req, res) => {
+    const { limit } = req.body;
+    const userId = req.userId;
+    const user = await User.findById({ _id: userId });
 
+    if (!limit) {
+        return res.status(400).json(createResponse(false, 'Please provide a limit.'));
+    } else if (limit === 'all') {
+        return res.json(createResponse(true, 'All workout entries:', user.workouts));
+    } else {
+        let date = new Date();
+        let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();
+
+        user.workouts = user.workouts.filter(entry => {
+            return new Date(entry.date).getTime() >= newDate;
+        })
+
+        return res.json(createResponse(true, `Workout entries for last ${limit} days.`, user.workouts));
+    }
 });
 
 router.get('/getuserworkouts', authTokenHandler, async (req, res) => {
-
+    let workoutGoal = 4;
+    res.json(createResponse(true, 'User goal workouts per week', { workoutGoal }));
 });
 
 router.delete('/deleteworkoutentry', authTokenHandler, async (req, res) => {

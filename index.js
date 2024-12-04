@@ -16,6 +16,7 @@ const waterTrackerRoutes = require('./Routes/WaterTracker');
 const weightTrackerRoutes = require('./Routes/WeightTracker');
 const workoutRoutineRoutes = require('./Routes/WorkoutRoutines');
 const workoutTrackerRoutes = require('./Routes/WorkoutTracker');
+const dataReportRoutes = require('./Routes/DataReport');
 
 require('dotenv').config();
 require('./db');
@@ -51,6 +52,7 @@ app.use('/watertracker', waterTrackerRoutes);
 app.use('/weighttracker', weightTrackerRoutes);
 app.use('/workoutroutines', workoutRoutineRoutes);
 app.use('/workouttracker', workoutTrackerRoutes);
+app.use('/datareport', dataReportRoutes);
 
 // When app starts, issue this message
 app.get('/', (req, res) => {

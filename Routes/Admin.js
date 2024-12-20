@@ -18,7 +18,7 @@ router.post('/register', async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
 
-        const admin = Admin.findOne({ email });
+        const admin = await Admin.findOne({ email });
 
         if (admin) {
             return res.status(409).json(createResponse(false, 'Admin with this email already exists.'));
@@ -41,7 +41,7 @@ router.post('/register', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
     try {
         const { email, password } = req.body;
-        const admin = Admin.findOne({ email });
+        const admin = await Admin.findOne({ email });
 
         if (!admin) {
             return res.status(400).json(createResponse(false, 'Admin with this email does not exist.'));

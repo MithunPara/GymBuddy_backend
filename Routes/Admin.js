@@ -63,7 +63,7 @@ router.post('/login', async (req, res, next) => {
     }
 });
 
-router.get('/checklogin', adminTokenHandler, async (req, res) => {
+router.post('/checklogin', adminTokenHandler, async (req, res) => {
     res.json({
         adminId: req.adminId,
         ok: true,

@@ -35,7 +35,7 @@ router.post('/routines', adminTokenHandler, async (req, res) => {
 });
 
 // Retrieve all existing routines in database
-router.get('/routines', async (req, res) => {
+router.get('/getroutines', async (req, res) => {
     try {
         const routines = await Routine.find({});
         res.json(createResponse(true, 'All workout routines fetched successfully.', routines));

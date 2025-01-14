@@ -120,44 +120,44 @@ router.get('/getreport', authTokenHandler, async (req, res) => {
         {
             name: 'Calorie Intake',
             value: calorieIntake,
-            goal: intakeTarget,
+            target: intakeTarget,
             unit: 'cal',
         },
         {
             name: 'Sleep',
             value: totalSleep,
-            goal: sleepGoal,
+            target: sleepGoal,
             unit: 'hrs',
         },
         {
             name: 'Steps',
             value: totalSteps,
-            goal: stepGoal,
+            target: stepGoal,
             unit: 'steps',
         },
         {
             name: 'Water',
             value: totalWater,
-            goal: waterGoal,
+            target: waterGoal,
             unit: 'mL',
         },
         {
             name: 'Workouts',
             value: weeklyWorkouts,
-            goal: workoutGoal,
+            target: workoutGoal,
             unit: 'days',
         },
         {
             name: 'Weight',
             value: userWeight,
-            goal: goalWeightRange,
+            target: goalWeightRange,
             unit: 'kg',
         },
         {
             name: 'Height',
             value: userHeight,
-            goal: '',
-            value: 'cm',
+            target: '',
+            unit: 'cm',
         },
     ]
 

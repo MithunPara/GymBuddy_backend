@@ -88,13 +88,13 @@ router.get('/getreport', authTokenHandler, async (req, res) => {
         intakeTarget = BMR;
     }
 
-    // Get goal weight
+    // Get goal weight using min and max BMI range based on user's height and weight
 
     let minBMI = 18.5;
     let maxBMI = 24.9;
     let minWeight = minBMI * ((user.height[user.height.length - 1].height / 100) ** 2);
     let maxWeight = maxBMI * ((user.height[user.height.length - 1].height / 100) ** 2);
-    let goalWeightRange = `Healthy weight range for your height: ${minWeight.toFixed(1)} kg - ${maxWeight.toFixed(1)} kg.`;
+    let goalWeightRange = `${minWeight.toFixed(1)} kg - ${maxWeight.toFixed(1)} kg`;
 
     // Get workout goal
     let workoutGoal = 4;
@@ -152,13 +152,7 @@ router.get('/getreport', authTokenHandler, async (req, res) => {
             value: userWeight,
             target: goalWeightRange,
             unit: 'kg',
-        },
-        {
-            name: 'Height',
-            value: userHeight,
-            target: '',
-            unit: 'cm',
-        },
+        }
     ]
 
     res.json(createResponse(true, 'Full report', response));

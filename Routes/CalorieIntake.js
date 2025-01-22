@@ -20,7 +20,7 @@ router.get('/test', authTokenHandler, async (req, res) => {
 });
 
 router.get('/searchfood', authTokenHandler, async (req, res) => {
-    const { query } = req.body;
+    const { query } = req.query;
 
     // Function to fetch data based on data type, ensures that we can obtain an even split of branded/SR legacy food options in the output
     const fetchDataType = async (dataType, pageSize) => {
@@ -124,7 +124,7 @@ router.get('/searchfood', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getnutrients', authTokenHandler, async (req, res) => {
-    const { fdcId } = req.body;
+    const { fdcId } = req.query;
 
     const options = {
         url: `https://api.nal.usda.gov/fdc/v1/food/${fdcId}`,

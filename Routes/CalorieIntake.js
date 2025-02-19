@@ -24,6 +24,8 @@ router.get('/searchfood', authTokenHandler, async (req, res) => {
 
     // Function to fetch data based on data type, ensures that we can obtain an even split of branded/SR legacy food options in the output
     const fetchDataType = async (dataType, pageSize) => {
+        // const wildcardQuery = `${query}*`;
+        
         const options = {
             url: 'https://api.nal.usda.gov/fdc/v1/foods/search',
             qs: {
@@ -50,6 +52,7 @@ router.get('/searchfood', authTokenHandler, async (req, res) => {
             });
         });
     }
+    
 
     try {
         // Separate API calls for branded/SR Legacy food items to obtain an even output
@@ -58,24 +61,108 @@ router.get('/searchfood', authTokenHandler, async (req, res) => {
 
         const [brandedFoods, srLegacyFoods] = await Promise.all([brandedFoodPromise, srLegacyFoodPromise]);
 
-        const combinedFoods = [...brandedFoods, ...srLegacyFoods];
+        const combinedFoods = [...srLegacyFoods, ...brandedFoods];
+        console.log(combinedFoods.map(food => food.description));
 
         const searchKeywords = query.toLowerCase().split(' '); // retrieve all the keywords from the search result
 
-        // Prioritize foods that contain all of the keywords provided in the search query
+        // // Prioritize foods that contain all of the keywords provided in the search query, use regular expressions so the search
+        // // is case-insensitive and food items without each keyword in order can be found
+        // // Ex. "chicken, broiled, breast" will still be found if the search is "chicken breast"
+        // const exactResults = combinedFoods.filter(food => {
+        //     const foodDesc = food.description.toLowerCase();
+            
+        //     // console.log(`Checking: "${food.description}"`);
+        
+        //     const matches = searchKeywords.every(keyword => {
+        //         const regex =  new RegExp(`(^|[^a-zA-Z0-9])${keyword}([^a-zA-Z0-9]|$)`, 'i');
+        //         const keywordMatches = regex.test(foodDesc);
+                
+        //         // console.log(`Keyword "${keyword}" match in "${food.description}":`, keywordMatches);
+        //         return keywordMatches;
+        //     });
+        
+        //     if (matches) {
+        //         // console.log(`Matched: "${food.description}"`);
+        //     }
+
+        //     return matches;
+        // });
+
         const exactResults = combinedFoods.filter(food => {
-            return searchKeywords.every(keyword => food.description.toLowerCase().includes(keyword));
+            const foodDesc = food.description.toLowerCase();
+        
+            const matches = searchKeywords.every(keyword => {
+                const regex = new RegExp(`\\b${keyword}\\b`, 'i'); 
+                return regex.test(foodDesc);
+            });
+        
+            return matches;
         });
+        
+
+        console.log('Exact Results:', exactResults.map(food => food.description));
 
         // if there are not enough foods that contain all keywords, add some food options that contain some of the keywords
         let otherResults = [];
         if (exactResults.length < 20) {
             otherResults = combinedFoods.filter(food => {
-                return searchKeywords.some(keyword => food.description.toLowerCase().includes(keyword) && !exactResults.includes(food));
+                return searchKeywords.some(keyword => food.description.toLowerCase().includes(keyword) && !exactResults.some(exactFood => exactFood.fdcId === food.fdcId));
             });
         }
 
+        console.log('Other results:', otherResults.map(food => food.description));
+
         const finalResults = [...exactResults, ...otherResults];
+
+        console.log('Final results:', finalResults.map(food => food.description));
+
+        // Prioritize by prefix match, full-word match, then partial match
+        // const rankedResults = combinedFoods.map(food => {
+        //     const foodDesc = food.description.toLowerCase();
+
+        //     let prefixMatchCount = 0;
+        //     let fullWordMatchCount = 0;
+        //     let partialMatchCount = 0;
+
+        //     searchKeywords.forEach(keyword => {
+        //         const words = foodDesc.split(/[\s,.-]+/); // Split on spaces, commas, periods, hyphens
+                
+        //         if (words.some(word => word.startsWith(keyword))) {
+        //             prefixMatchCount++;
+        //         } else if (words.includes(keyword)) {
+        //             fullWordMatchCount++;
+        //         } else if (foodDesc.includes(keyword)) {
+        //             partialMatchCount++;
+        //         }
+        //     });
+
+        //     return { 
+        //         ...food, 
+        //         prefixMatchCount, 
+        //         fullWordMatchCount, 
+        //         partialMatchCount 
+        //     };
+        // });
+
+        // // Sort by prefix matches > full word matches > partial matches
+        // rankedResults.sort((a, b) => {
+        //     if (b.prefixMatchCount !== a.prefixMatchCount) {
+        //         return b.prefixMatchCount - a.prefixMatchCount;
+        //     } else if (b.fullWordMatchCount !== a.fullWordMatchCount) {
+        //         return b.fullWordMatchCount - a.fullWordMatchCount;
+        //     } else {
+        //         return b.partialMatchCount - a.partialMatchCount;
+        //     }
+        // });
+
+        // // Filter out results that don't match at all
+        // const finalResults = rankedResults.filter(food => 
+        //     food.prefixMatchCount > 0 || food.fullWordMatchCount > 0 || food.partialMatchCount > 0
+        // );
+
+        // console.log('Final results:', finalResults.map(food => food.description));
+        
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Add in limit logic below if I want to standardize amount of items received on each query.
@@ -116,6 +203,8 @@ router.get('/searchfood', authTokenHandler, async (req, res) => {
             }
         });
 
+        // console.log(foodList);
+
         res.json(createResponse(true, 'List of matching food items retrieved successfully.', foodList));
     } catch (err) {
         console.error('Error:', error);
@@ -141,16 +230,16 @@ router.get('/getnutrients', authTokenHandler, async (req, res) => {
         else if(response.statusCode != 200) return console.error('Error:', response.statusCode, body.toString('utf8'));
         else {
             const data = JSON.parse(body);
-            const nutrients = data.foodNutrients.filter(nutrient => [
-                'Energy', 'Protein', 'Total lipid (fat)', 'Carbohydrate, by difference'
-            ].some(keyword => {
+
+            const nutrients = data.foodNutrients.filter(nutrient => {
                 if (nutrient.nutrient && nutrient.nutrient.name) {
-                    return nutrient.nutrient.name.includes(keyword);
+                    if (nutrient.nutrient.name === 'Energy' && nutrient.nutrient.unitName === 'kcal') {
+                        return true;
+                    }
+                    return ['Protein', 'Total lipid (fat)', 'Carbohydrate, by difference'].some(keyword => nutrient.nutrient.name.includes(keyword));
                 }
                 return false;
-            }
-            )
-            );
+            });
 
             res.json(createResponse(true, 'Macronutrients for food item retrieved successfully.', nutrients));
         }

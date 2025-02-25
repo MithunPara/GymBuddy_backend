@@ -22,7 +22,7 @@ router.get('/test', authTokenHandler, async (req, res) => {
 router.get('/searchfood', authTokenHandler, async (req, res) => {
     const { query } = req.query;
 
-    // Function to fetch data based on data type, ensures that we can obtain an even split of branded/SR legacy food options in the output
+    // Function to fetch data based on data type, ensures that we can obtain an even split of branded, SR legacy and foundation food options in the output
     const fetchDataType = async (dataType, pageSize) => {
         // const wildcardQuery = `${query}*`;
         
@@ -56,12 +56,13 @@ router.get('/searchfood', authTokenHandler, async (req, res) => {
 
     try {
         // Separate API calls for branded/SR Legacy food items to obtain an even output
+        const foundationFoodPromise = fetchDataType('Foundation', 10);
         const brandedFoodPromise = fetchDataType('Branded', 15);
         const srLegacyFoodPromise = fetchDataType('SR Legacy', 15);
 
-        const [brandedFoods, srLegacyFoods] = await Promise.all([brandedFoodPromise, srLegacyFoodPromise]);
+        const [foundationFoods, brandedFoods, srLegacyFoods] = await Promise.all([foundationFoodPromise, brandedFoodPromise, srLegacyFoodPromise]);
 
-        const combinedFoods = [...srLegacyFoods, ...brandedFoods];
+        const combinedFoods = [...foundationFoods, ...srLegacyFoods, ...brandedFoods];
         console.log(combinedFoods.map(food => food.description));
 
         const searchKeywords = query.toLowerCase().split(' '); // retrieve all the keywords from the search result
@@ -312,7 +313,7 @@ router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getcalorieintakebydate', authTokenHandler, async (req, res) => {
-    const { date } = req.body;
+    const { date } = req.query;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
     if (!date) {

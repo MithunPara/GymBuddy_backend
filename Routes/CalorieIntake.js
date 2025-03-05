@@ -234,7 +234,7 @@ router.get('/getnutrients', authTokenHandler, async (req, res) => {
 
             const nutrients = data.foodNutrients.filter(nutrient => {
                 if (nutrient.nutrient && nutrient.nutrient.name) {
-                    if (nutrient.nutrient.name === 'Energy' && nutrient.nutrient.unitName === 'kcal') {
+                    if ((nutrient.nutrient.name === 'Energy' || nutrient.nutrient.name === 'Energy (Atwater Specific Factors)') && nutrient.nutrient.unitName === 'kcal') {
                         return true;
                     }
                     return ['Protein', 'Total lipid (fat)', 'Carbohydrate, by difference'].some(keyword => nutrient.nutrient.name.includes(keyword));
@@ -282,12 +282,15 @@ router.post('/addcalorieintake', authTokenHandler, async (req, res) => {
         else {
             const data = JSON.parse(body);
 
-            const calorieNutrient = data.foodNutrients.find(nutrient => {
-                if (nutrient.nutrient && nutrient.nutrient.name && nutrient.nutrient.unitName) {
-                    return nutrient.nutrient.name.includes('Energy') && nutrient.nutrient.unitName === 'kcal';
-                }
-                return false;
+            let calorieNutrient = data.foodNutrients.find(nutrient => {
+                return nutrient.nutrient && nutrient.nutrient.name === 'Energy' && nutrient.nutrient.unitName === 'kcal';
             });
+            
+            if (!calorieNutrient) {
+                calorieNutrient = data.foodNutrients.find(nutrient => {
+                    return nutrient.nutrient && nutrient.nutrient.name === 'Energy (Atwater Specific Factors)' && nutrient.nutrient.unitName === 'kcal';
+                });
+            }
 
             if (!calorieNutrient || isNaN(calorieNutrient.amount)) {
                 return console.error('Invalid API response:', data);
@@ -383,7 +386,7 @@ router.delete('/deletecalorieintake', authTokenHandler, async (req, res) => {
     }
 
     user.calorieIntake = user.calorieIntake.filter(entry => {
-        return entry.date != date && entry.item != item;
+        return entry.item !== item || (entry.date.toString() !== new Date(date).toString());
     });
 
     await user.save();

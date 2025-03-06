@@ -330,7 +330,7 @@ router.get('/getcalorieintakebydate', authTokenHandler, async (req, res) => {
 });
 
 router.get('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
-    const { limit } = req.body;
+    const { limit } = req.query;
     const userId = req.userId;
     const user = await User.findById({ _id: userId });
     if(!limit) {

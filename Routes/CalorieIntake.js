@@ -341,10 +341,25 @@ router.get('/getcalorieintakebylimit', authTokenHandler, async (req, res) => {
         let date = new Date();
         let newDate = new Date(date.setDate(date.getDate() - parseInt(limit))).getTime();
 
-        user.calorieIntake = user.calorieIntake.filter(entry => {
+        // Get all items that the user has ate/drank in the past 10 days
+        const filteredIntake = user.calorieIntake.filter(entry => {
             return new Date(entry.date).getTime() >= newDate;
         });
-        return res.json(createResponse(true, `Calorie intake for last ${limit} days:`, user.calorieIntake));
+
+        // Filter the items by date to get the total calorie intake for each day
+        const aggregatedIntake = filteredIntake.reduce((acc, entry) => {
+            const entryDate = new Date(entry.date);
+            const existingEntryDate = acc.find(item => new Date(item.date).getDate() === entryDate.getDate());
+
+            if (existingEntryDate) {
+                existingEntryDate.value += entry.intake;
+            } else {
+                acc.push({ date: entry.date, value: entry.intake, unit: 'cal' });
+            }
+            return acc;
+        }, [])
+
+        return res.json(createResponse(true, `Calorie intake for last ${limit} days:`, aggregatedIntake));
     }
 });
 

@@ -80,7 +80,10 @@ router.put('/workouts/:id', adminTokenHandler, async (req, res) => {
 router.delete('/workouts/:id', adminTokenHandler, async (req, res) => {
     try {
         const routine = await Routine.findById(req.params.id);
-        await routine.remove();
+        if (!routine) {
+            return res.status(404).json(createResponse(false, 'Workout routine not found.'));
+        }
+        await Routine.deleteOne({ _id: routine._id });
         res.json(createResponse(true, 'Workout routine deleted successfully.'));
     }
     catch (err) {
